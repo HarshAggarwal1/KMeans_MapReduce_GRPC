@@ -52,25 +52,7 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
             file.write(f"{centroid.x},{centroid.y}\n")
         file.close()
         
-        # self.plot(points, centroids)
-        
         return kmeans_pb2.CentroidCompilationOutput(centroids=centroids)
-    
-    
-    def plot(self, points, centroids):
-        import matplotlib.pyplot as plt
-        import numpy as np
-        
-        x = [point.x for point in points]
-        y = [point.y for point in points]
-        
-        plt.scatter(x, y, color="blue")
-        
-        x = [centroid.x for centroid in centroids]
-        y = [centroid.y for centroid in centroids]
-        
-        plt.scatter(x, y, color="red")
-        plt.savefig("plot.png")
     
     
     def check_convergence(self, new_centroids, centroids):
@@ -165,7 +147,7 @@ def serve():
     server.start()
     channel = grpc.insecure_channel("localhost:50051")
     stub = kmeans_pb2_grpc.KMeansStub(channel)
-    stub.Run(kmeans_pb2.MasterInput(num_mappers=2, num_reducers=2, num_iterations=3, num_centroids=2))
+    stub.Run(kmeans_pb2.MasterInput(num_mappers=5, num_reducers=2, num_iterations=50, num_centroids=8))
 
 
 if __name__ == "__main__":
