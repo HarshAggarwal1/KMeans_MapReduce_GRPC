@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package kmeans;
+
+message MasterInput {
+    int32 num_mappers = 1;
+    int32 num_reducers = 2;
+    int32 num_centroids = 3;
+    int32 num_iterations = 4;
+}
+
+message InputSplit {
+    int32 start_index = 2;
+    int32 end_index = 3;
+}
+
+message Point {
+    float x = 1;
+    float y = 2;
+}
+
+message MapInput {
+    InputSplit input_split = 1;
+    repeated Point centroids = 2;
+}
+
+message MappedPoint {
+    int32 centroid_index = 1;
+    Point data_point = 2;
+    int32 count = 3;
+}
+
+message MapOutput {
+    repeated MappedPoint mapped_points = 1;
+}
+
+message PartitionInput {
+    repeated MappedPoint mapped_points = 1;
+    int32 num_reducers = 2;
+}
+
+message PartitionOutput {
+    bool success = 1;
+}
+
+message ReduceInput {
+    int32 centroid_id = 1;
+}
+
+message ReduceOutput {
+    int32 centroid_id = 1;
+    Point updated_centroid = 2;
+    bool success = 3;
+}
+
+message CentroidCompilationInput {
+    repeated ReduceOutput reduce_outputs = 1;
+}
+
+message CentroidCompilationOutput {
+    repeated Point centroids = 1;
+}
+
+service KMeans {
+    rpc Run(MasterInput) returns (CentroidCompilationOutput) {}
+    rpc Map(MapInput) returns (MapOutput) {}
+    rpc Partition(PartitionInput) returns (PartitionOutput) {}
+    rpc Reduce(ReduceInput) returns (ReduceOutput) {}
+    rpc CompileCentroids(CentroidCompilationInput) returns (CentroidCompilationOutput) {}
+}
