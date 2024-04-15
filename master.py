@@ -36,7 +36,7 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
                 for file in files:
                     os.remove(f"Reducers/{file}")
             
-            new_centroids = self.work(num_mappers, num_reducers, num_iterations, num_centroids, points, centroids)
+            new_centroids = self.work(num_mappers, num_reducers, num_centroids, points, centroids)
             
             if self.check_convergence(new_centroids, centroids):
                 break
@@ -63,7 +63,7 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
         return True
         
         
-    def work(self, num_mappers, num_reducers, num_iterations, num_centroids, points, centroids):
+    def work(self, num_mappers, num_reducers, num_centroids, points, centroids):
        
        # ======================================================================================================================= #
        
