@@ -9,6 +9,7 @@ import mapper
 import reducer
 import datetime
 import time
+
 class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
     def Run(self, request, context):
         

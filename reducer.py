@@ -2,11 +2,8 @@ import grpc
 import kmeans_pb2
 import kmeans_pb2_grpc
 import os
-import random
 from concurrent import futures
 import mapper
-import datetime
-import time
 
 class ReducerServicer(kmeans_pb2_grpc.KMeansServicer):
     
