@@ -93,74 +93,93 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
         # ======================================================================================================================= #
         
         map_tasks = []
+        map_tasks_address = []
         for i in range(num_mappers):
             map_task = multiprocessing.Process(target=mapper.serve, args=("localhost", f"6005{i + 1}", i + 1))
+            map_tasks_address.append(f"localhost:6005{i + 1}")
             ff.write(f"{datetime.datetime.now()} - Mapper {i + 1} started\n") #
             try:
                 map_task.start()
                 map_tasks.append(map_task)
             except Exception as e:
                 print(e)
+        map_tasks_addresses = set(map_tasks_address)
+        
         
         num_points = round(len(points) / num_mappers)
-        for i in range(num_mappers):
-            channel = grpc.insecure_channel(f"localhost:6005{i + 1}")
-            stub = kmeans_pb2_grpc.KMeansStub(channel)
+        while len(map_tasks_addresses) > 0:
+            temp_address = map_tasks_addresses.pop()
+            channel = grpc.insecure_channel(temp_address)
             
-            input_split = kmeans_pb2.InputSplit()
-            input_split.start_index = i * num_points
-            input_split.end_index = min((i + 1) * num_points - 1, len(points) - 1)
-            map_input = kmeans_pb2.MapInput(input_split=input_split, centroids=centroids)
-            response = stub.Map(map_input)
-            if response.success:
-                ff.write(f"{datetime.datetime.now()} - Mapping by Mapper {i + 1} successful\n") #
+            try:
+                stub = kmeans_pb2_grpc.KMeansStub(channel)
+                input_split = kmeans_pb2.InputSplit()
+                input_split.start_index = i * num_points
+                input_split.end_index = min((i + 1) * num_points - 1, len(points) - 1)
+                map_input = kmeans_pb2.MapInput(input_split=input_split, centroids=centroids)
+                response = stub.Map(map_input)
+                if response.success:
+                    ff.write(f"{datetime.datetime.now()} - Mapping by Mapper ({temp_address}) successful\n") #
+                
+                partition_input = kmeans_pb2.PartitionInput(mapped_points=response.mapped_points, num_reducers=num_reducers)
+                response = stub.Partition(partition_input)
+                if response.success:
+                    ff.write(f"{datetime.datetime.now()} - Partitioning by Mapper ({temp_address}) successful\n") #
+                
+                if response.success:
+                    print(f"Partitioning by Mapper ({temp_address}) successful")
             
-            partition_input = kmeans_pb2.PartitionInput(mapped_points=response.mapped_points, num_reducers=num_reducers)
-            response = stub.Partition(partition_input)
-            if response.success:
-                ff.write(f"{datetime.datetime.now()} - Partitioning by Mapper {i + 1} successful\n") #
-            
-            if response.success:
-                print(f"Partitioning by Mapper {i + 1} successful")
-            
+            except Exception as e:
+                map_tasks_addresses.add(temp_address)
+                ff.write(f"{datetime.datetime.now()} - Error in Mapper {i + 1}\n") #
+                
             channel.close()
         
         
         # ========================================================================================================================= #
         
         reduce_tasks = []
+        reduce_tasks_address = []
         for i in range(num_reducers):
             reduce_task = multiprocessing.Process(target=reducer.serve, args=("localhost", f"7005{i + 1}", i + 1))
+            reduce_tasks_address.append(f"localhost:7005{i + 1}")
             ff.write(f"{datetime.datetime.now()} - Reducer {i + 1} started\n") #
             try:
                 reduce_task.start()
                 reduce_tasks.append(reduce_task)
             except Exception as e:
                 print(e)
+        reduce_tasks_addresses = set(reduce_tasks_address)
         
-        for i in range(num_reducers):
-            channel = grpc.insecure_channel(f"localhost:7005{i + 1}")
-            stub = kmeans_pb2_grpc.KMeansStub(channel)
+        while len(reduce_tasks_addresses) > 0:
+            temp_address = reduce_tasks_addresses.pop()
+            channel = grpc.insecure_channel(temp_address)
             
-            for j in range(num_centroids):
-                reduce_input = kmeans_pb2.ReduceInput(num_mappers=num_mappers, centroid_id=j)
-                response = stub.Reduce(reduce_input)
-                if response.done:
-                    new_centroids[response.centroid_id] = response.updated_centroid
-            
-            if response.success:
-                ff.write(f"{datetime.datetime.now()} - Reducing by Reducer {i + 1} successful\n") #
-                print(f"Reducing by Reducer {i + 1} successful")
+            try:
+                stub = kmeans_pb2_grpc.KMeansStub(channel)
+                
+                for j in range(num_centroids):
+                    reduce_input = kmeans_pb2.ReduceInput(num_mappers=num_mappers, centroid_id=j)
+                    response = stub.Reduce(reduce_input)
+                    if response.done:
+                        new_centroids[response.centroid_id] = response.updated_centroid
+                
+                if response.success:
+                    ff.write(f"{datetime.datetime.now()} - Reducing by Reducer ({temp_address}) successful\n") #
+                    print(f"Reducing by Reducer ({temp_address}) successful")
+            except Exception as e:
+                reduce_tasks_addresses.add(temp_address)
+                ff.write(f"{datetime.datetime.now()} - Error in Reducer ({temp_address})\n")
             
             channel.close()
         
-        for task in map_tasks:
-            ff.write(f"{datetime.datetime.now()} - Mapper {task.pid} terminated\n") #
-            task.terminate()
+        for i in range(len(map_tasks)):
+            ff.write(f"{datetime.datetime.now()} - Mapper {i + 1} terminated\n") #
+            map_tasks[i].terminate()
             
-        for task in reduce_tasks:
-            ff.write(f"{datetime.datetime.now()} - Reducer {task.pid} terminated\n") #
-            task.terminate()
+        for i in range(len(reduce_tasks)):
+            ff.write(f"{datetime.datetime.now()} - Reducer {i + 1} terminated\n")
+            reduce_tasks[i].terminate()
                             
         ff.close()    
         return new_centroids
