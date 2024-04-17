@@ -169,6 +169,8 @@ def serve():
     if os.path.isfile("Data/Input/points.txt") == False:
         print("Data/Input/points.txt does not exist")
         return
+    if os.path.isfile("Dump.txt"):
+        os.remove("Dump.txt")
     if os.path.isfile("Dump.txt") == False:
         file = open("Dump.txt", "w")
         file.close()
