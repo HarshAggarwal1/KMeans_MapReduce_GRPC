@@ -38,8 +38,6 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
             map_output.data_point.x, map_output.data_point.y = point.x, point.y
             map_output.count = 1
             mapped_points.append(map_output)
-            
-        file.close()
         
         return kmeans_pb2.MapOutput(mapped_points=mapped_points)
     
