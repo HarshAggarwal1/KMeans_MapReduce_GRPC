@@ -39,7 +39,7 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
             map_output.count = 1
             mapped_points.append(map_output)
         
-        return kmeans_pb2.MapOutput(mapped_points=mapped_points)
+        return kmeans_pb2.MapOutput(mapped_points=mapped_points, success=True)
     
         
     def Partition(self, request, context):
@@ -85,12 +85,11 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
 
     
     def MapperToReducer(self, request, context):
-        reducer_address = request.address
         reducer_id = int(request.id)
         mapped_points = []
         
         if os.path.isfile(f"Data/Mappers/M{self.id}/Partition{reducer_id - 1}.txt") == False:
-            return kmeans_pb2.MapperToReducerOutput(mapped_points=mapped_points)
+            return kmeans_pb2.MapperToReducerOutput(mapped_points=mapped_points, success=True)
         
         file = open(f"Data/Mappers/M{self.id}/Partition{reducer_id - 1}.txt", "r")
         
@@ -105,7 +104,7 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
             
         file.close()
         
-        return kmeans_pb2.MapperToReducerOutput(mapped_points=mapped_points)
+        return kmeans_pb2.MapperToReducerOutput(mapped_points=mapped_points, success=True)
             
         
     def find_nearest_centroid(self, point, centroids):
@@ -123,7 +122,7 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
         return (((point1.x - point2.x) ** 2) + ((point1.y - point2.y) ** 2)) ** 0.5
 
 
-def serve(address, port, id):
+def serve(address, port, id):    
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     mapper = MapperServicer(str(address), str(port), str(id))
     kmeans_pb2_grpc.add_KMeansServicer_to_server(mapper, server)

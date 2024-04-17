@@ -32,6 +32,7 @@ message MappedPoint {
 
 message MapOutput {
     repeated MappedPoint mapped_points = 1;
+    optional bool success = 2;
 }
 
 message PartitionInput {
@@ -40,7 +41,7 @@ message PartitionInput {
 }
 
 message PartitionOutput {
-    bool success = 1;
+    optional bool success = 1;
 }
 
 message ReduceInput {
@@ -51,8 +52,8 @@ message ReduceInput {
 message ReduceOutput {
     int32 centroid_id = 1;
     Point updated_centroid = 2;
-    bool success = 3;
-    bool done = 4;
+    optional bool success = 3;
+    optional bool done = 4;
 }
 
 message CentroidCompilationInput {
@@ -61,15 +62,16 @@ message CentroidCompilationInput {
 
 message CentroidCompilationOutput {
     repeated Point centroids = 1;
+    optional bool success = 2;
 }
 
 message MapperToReducerInput {
-    string address = 1;
-    string id = 2;
+    string id = 1;
 }
 
 message MapperToReducerOutput {
     repeated MappedPoint mapped_points = 1;
+    optional bool success = 2;
 }
 
 service KMeans {

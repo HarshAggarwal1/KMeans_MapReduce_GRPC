@@ -29,19 +29,31 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
         centroids = []
         for i in range(num_centroids):
             centroids.append(random.choice(points))
+            
+        ff = open("Dump.txt", "a+")
+        ff.write(f"{datetime.datetime.now()} - Initial centroids: {centroids}\n") #
+        ff.close()
         
         for i in range(num_iterations):
-            
+            ff = open("Dump.txt", "a+")
+            ff.write(f"=======================================================================\n") #
+            ff.write(f"{datetime.datetime.now()} - Iteration {i + 1}\n") #
+            ff.close()
             for _, _, files in os.walk("Data/Reducers"):
                 for file in files:
                     os.remove(f"Data/Reducers/{file}")        
             
             new_centroids = self.work(num_mappers, num_reducers, num_centroids, points, centroids)
             
+            ff = open("Dump.txt", "a+")
             if self.check_convergence(new_centroids, centroids):
+                ff.write(f"{datetime.datetime.now()} - Converged at Iteration: {i + 1}\n") #
                 break
             else:
                 centroids = new_centroids
+                ff.write(f"{datetime.datetime.now()} - Updated centroids: {centroids}\n") #
+            ff.close()
+            
                 
         # write the final centroids to a file
         if os.path.isfile("Data/centroids.txt") == False:
@@ -52,6 +64,12 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
         for centroid in centroids:
             file.write(f"{centroid.x},{centroid.y}\n")
         file.close()
+        
+        ff = open("Dump.txt", "a+")
+        ff.write(f"=======================================================================\n") #
+        ff.write(f"{datetime.datetime.now()} - Final centroids: {centroids}\n") #
+        ff.write(f"=======================================================================\n") #
+        ff.close()
         
         return kmeans_pb2.CentroidCompilationOutput(centroids=centroids)
     
@@ -64,9 +82,10 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
         
         
     def work(self, num_mappers, num_reducers, num_centroids, points, centroids):
+        
+        ff = open("Dump.txt", "a+") #
        
        # ======================================================================================================================= #
-       
         new_centroids = []
         for i in range(num_centroids):
             new_centroids.append(kmeans_pb2.Point())
@@ -76,6 +95,7 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
         map_tasks = []
         for i in range(num_mappers):
             map_task = multiprocessing.Process(target=mapper.serve, args=("localhost", f"6005{i + 1}", i + 1))
+            ff.write(f"{datetime.datetime.now()} - Mapper {i + 1} started\n") #
             try:
                 map_task.start()
                 map_tasks.append(map_task)
@@ -92,9 +112,13 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
             input_split.end_index = min((i + 1) * num_points - 1, len(points) - 1)
             map_input = kmeans_pb2.MapInput(input_split=input_split, centroids=centroids)
             response = stub.Map(map_input)
+            if response.success:
+                ff.write(f"{datetime.datetime.now()} - Mapping by Mapper {i + 1} successful\n") #
             
             partition_input = kmeans_pb2.PartitionInput(mapped_points=response.mapped_points, num_reducers=num_reducers)
             response = stub.Partition(partition_input)
+            if response.success:
+                ff.write(f"{datetime.datetime.now()} - Partitioning by Mapper {i + 1} successful\n") #
             
             if response.success:
                 print(f"Partitioning by Mapper {i + 1} successful")
@@ -107,6 +131,7 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
         reduce_tasks = []
         for i in range(num_reducers):
             reduce_task = multiprocessing.Process(target=reducer.serve, args=("localhost", f"7005{i + 1}", i + 1))
+            ff.write(f"{datetime.datetime.now()} - Reducer {i + 1} started\n") #
             try:
                 reduce_task.start()
                 reduce_tasks.append(reduce_task)
@@ -124,19 +149,33 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
                     new_centroids[response.centroid_id] = response.updated_centroid
             
             if response.success:
+                ff.write(f"{datetime.datetime.now()} - Reducing by Reducer {i + 1} successful\n") #
                 print(f"Reducing by Reducer {i + 1} successful")
             
             channel.close()
         
         for task in map_tasks:
+            ff.write(f"{datetime.datetime.now()} - Mapper {task.pid} terminated\n") #
             task.terminate()
             
         for task in reduce_tasks:
+            ff.write(f"{datetime.datetime.now()} - Reducer {task.pid} terminated\n") #
             task.terminate()
-                                
+                            
+        ff.close()    
         return new_centroids
 
 def serve():
+    if os.path.isfile("Data/Input/points.txt") == False:
+        print("Data/Input/points.txt does not exist")
+        return
+    if os.path.isfile("Dump.txt") == False:
+        file = open("Dump.txt", "w")
+        file.close()
+    
+    file = open("Dump.txt", "a+")
+    file.write(f"{datetime.datetime.now()} - Server started at: localhost:50051\n") #
+    
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     master = MasterServicer()
     kmeans_pb2_grpc.add_KMeansServicer_to_server(master, server)
@@ -144,7 +183,16 @@ def serve():
     server.start()
     channel = grpc.insecure_channel("localhost:50051")
     stub = kmeans_pb2_grpc.KMeansStub(channel)
-    stub.Run(kmeans_pb2.MasterInput(num_mappers=5, num_reducers=3, num_iterations=50, num_centroids=8))
+    
+    num_mappers = int(input("Enter the number of mappers: "))
+    num_reducers = int(input("Enter the number of reducers: "))
+    num_iterations = int(input("Enter the number of iterations: "))
+    num_centroids = int(input("Enter the number of centroids: "))
+    
+    file.write(f"{datetime.datetime.now()} - Master started with {num_mappers} mappers, {num_reducers} reducers, {num_iterations} iterations, and {num_centroids} centroids\n") #
+    file.close()
+    
+    stub.Run(kmeans_pb2.MasterInput(num_mappers=num_mappers, num_reducers=num_reducers, num_iterations=num_iterations, num_centroids=num_centroids))
 
 
 if __name__ == "__main__":

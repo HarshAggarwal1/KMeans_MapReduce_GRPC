@@ -51,7 +51,7 @@ class ReducerServicer(kmeans_pb2_grpc.KMeansServicer):
         for i in range(num_mappers):
             channel = grpc.insecure_channel(f"localhost:6005{i + 1}")
             stub = kmeans_pb2_grpc.KMeansStub(channel)
-            mapper_to_reducer_input = kmeans_pb2.MapperToReducerInput(address=f'{self.address}:{self.port}', id=self.id)
+            mapper_to_reducer_input = kmeans_pb2.MapperToReducerInput(id=self.id)
             response = stub.MapperToReducer(mapper_to_reducer_input)
             channel.close()
             shuffled_points.extend(response.mapped_points)
