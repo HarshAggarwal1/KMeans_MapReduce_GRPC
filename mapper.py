@@ -20,7 +20,7 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
         
         self.num_centroids = len(centroids)
 
-        file = open("Input/points.txt", "r")
+        file = open("Data/Input/points.txt", "r")
         points = []
         for line in file:
             point = kmeans_pb2.Point()
@@ -58,13 +58,13 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
         num_centroid_per_reducer = round(len(centroids) / num_reducers)
         i = 0
         while num_points > 0:
-            if os.path.isdir(f"Mappers/M{self.id}") == False:
-                os.mkdir(f"Mappers/M{self.id}")
-            if os.path.isfile(f"Mappers/M{self.id}/Partition{i}.txt") == False:
-                file = open(f"Mappers/M{self.id}/Partition{i}.txt", "w")
+            if os.path.isdir(f"Data/Mappers/M{self.id}") == False:
+                os.mkdir(f"Data/Mappers/M{self.id}")
+            if os.path.isfile(f"Data/Mappers/M{self.id}/Partition{i}.txt") == False:
+                file = open(f"Data/Mappers/M{self.id}/Partition{i}.txt", "w")
                 file.close()
             
-            file = open(f"Mappers/M{self.id}/Partition{i}.txt", "w")
+            file = open(f"Data/Mappers/M{self.id}/Partition{i}.txt", "w")
             
             for _ in range(num_centroid_per_reducer):
                 c_ind = centroids.pop()
@@ -84,10 +84,10 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
         reducer_id = int(request.id)
         mapped_points = []
         
-        if os.path.isfile(f"Mappers/M{self.id}/Partition{reducer_id - 1}.txt") == False:
+        if os.path.isfile(f"Data/Mappers/M{self.id}/Partition{reducer_id - 1}.txt") == False:
             return kmeans_pb2.MapperToReducerOutput(mapped_points=mapped_points)
         
-        file = open(f"Mappers/M{self.id}/Partition{reducer_id - 1}.txt", "r")
+        file = open(f"Data/Mappers/M{self.id}/Partition{reducer_id - 1}.txt", "r")
         
         
         for line in file:

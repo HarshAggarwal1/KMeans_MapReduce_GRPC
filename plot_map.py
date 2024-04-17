@@ -6,11 +6,11 @@ centroid_coords = []
 
 centroids = {}
 
-for _, dirs, _ in os.walk("Mappers"):
+for _, dirs, _ in os.walk("Data/Mappers"):
     for dir in dirs:
-        for _, _, files in os.walk(f"Mappers/{dir}"):
+        for _, _, files in os.walk(f"Data/Mappers/{dir}"):
             for file in files:
-                file = open(f"Mappers/{dir}/{file}", "r")
+                file = open(f"Data/Mappers/{dir}/{file}", "r")
                 for line in file:
                     centroid_index = int(line.split(",")[0])
                     x = float(line.split(",")[1])
@@ -21,7 +21,7 @@ for _, dirs, _ in os.walk("Mappers"):
 
 # plot the centroids and the points with their respective centroids in different colors
 
-file = open("centroids.txt", "r")
+file = open("Data/centroids.txt", "r")
 for line in file:
     x, y = map(float, line.split(sep=","))
     centroid_coords.append((x, y))

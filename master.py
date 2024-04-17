@@ -18,7 +18,7 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
         num_iterations = request.num_iterations
         num_centroids = request.num_centroids
         
-        file = open("Input/points.txt", "r")
+        file = open("Data/Input/points.txt", "r")
         points = []
         for line in file:
             point = kmeans_pb2.Point()
@@ -32,9 +32,9 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
         
         for i in range(num_iterations):
             
-            for _, _, files in os.walk("Reducers"):
+            for _, _, files in os.walk("Data/Reducers"):
                 for file in files:
-                    os.remove(f"Reducers/{file}")        
+                    os.remove(f"Data/Reducers/{file}")        
             
             new_centroids = self.work(num_mappers, num_reducers, num_centroids, points, centroids)
             
@@ -44,11 +44,11 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
                 centroids = new_centroids
                 
         # write the final centroids to a file
-        if os.path.isfile("centroids.txt") == False:
-            file = open("centroids.txt", "w")
+        if os.path.isfile("Data/centroids.txt") == False:
+            file = open("Data/centroids.txt", "w")
             file.close()
         
-        file = open("centroids.txt", "w")
+        file = open("Data/centroids.txt", "w")
         for centroid in centroids:
             file.write(f"{centroid.x},{centroid.y}\n")
         file.close()

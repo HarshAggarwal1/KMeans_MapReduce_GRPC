@@ -36,11 +36,11 @@ class ReducerServicer(kmeans_pb2_grpc.KMeansServicer):
         new_centroid.x = sum_x / count
         new_centroid.y = sum_y / count
         
-        if os.path.isfile(f"Reducers/R{self.id}.txt") == False:
-            file = open(f"Reducers/R{self.id}.txt", "w")
+        if os.path.isfile(f"Data/Reducers/R{self.id}.txt") == False:
+            file = open(f"Data/Reducers/R{self.id}.txt", "w")
             file.close()
         
-        file = open(f"Reducers/R{self.id}.txt", "a+")
+        file = open(f"Data/Reducers/R{self.id}.txt", "a+")
         file.write(f"{centroid_index},{new_centroid.x},{new_centroid.y}\n")
         
         return kmeans_pb2.ReduceOutput(centroid_id=centroid_index, updated_centroid=new_centroid, success=True)
