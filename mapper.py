@@ -54,8 +54,9 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
         
         num_points = len(map_outputs)
         num_centroid_per_reducer = round(len(centroids) / num_reducers)
+        reducers_left = num_reducers
         i = 0
-        while num_points > 0:
+        while reducers_left > 0:
             if os.path.isdir(f"Data/Mappers/M{self.id}") == False:
                 os.mkdir(f"Data/Mappers/M{self.id}")
             if os.path.isfile(f"Data/Mappers/M{self.id}/Partition{i}.txt") == False:
@@ -64,7 +65,12 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
             
             file = open(f"Data/Mappers/M{self.id}/Partition{i}.txt", "w")
             
-            for _ in range(num_centroid_per_reducer):
+            times = num_centroid_per_reducer
+            
+            if (reducers_left == 1):
+                times = len(centroids)
+            
+            for _ in range(times):
                 c_ind = centroids.pop()
                 for map_output in map_outputs:
                     if map_output.centroid_index == c_ind and num_points > 0:
@@ -72,6 +78,7 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
                         num_points -= 1
             
             file.close()
+            reducers_left -= 1
             i += 1
     
         return kmeans_pb2.PartitionOutput(success=True)

@@ -30,7 +30,7 @@ class ReducerServicer(kmeans_pb2_grpc.KMeansServicer):
             count += point.count
         
         if count == 0:
-            return kmeans_pb2.ReduceOutput(centroid_id=centroid_index, updated_centroid=point.data_point, success=False)
+            return kmeans_pb2.ReduceOutput(centroid_id=centroid_index, updated_centroid=point.data_point, success=True, done=False)
         
         new_centroid = kmeans_pb2.Point()
         new_centroid.x = sum_x / count
@@ -43,7 +43,7 @@ class ReducerServicer(kmeans_pb2_grpc.KMeansServicer):
         file = open(f"Data/Reducers/R{self.id}.txt", "a+")
         file.write(f"{centroid_index},{new_centroid.x},{new_centroid.y}\n")
         
-        return kmeans_pb2.ReduceOutput(centroid_id=centroid_index, updated_centroid=new_centroid, success=True)
+        return kmeans_pb2.ReduceOutput(centroid_id=centroid_index, updated_centroid=new_centroid, success=True, done=True)
 
     
     def shuffle_and_sort(self, num_mappers):

@@ -120,7 +120,7 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
             for j in range(num_centroids):
                 reduce_input = kmeans_pb2.ReduceInput(num_mappers=num_mappers, centroid_id=j)
                 response = stub.Reduce(reduce_input)
-                if response.success:
+                if response.done:
                     new_centroids[response.centroid_id] = response.updated_centroid
             
             if response.success:
@@ -144,7 +144,7 @@ def serve():
     server.start()
     channel = grpc.insecure_channel("localhost:50051")
     stub = kmeans_pb2_grpc.KMeansStub(channel)
-    stub.Run(kmeans_pb2.MasterInput(num_mappers=5, num_reducers=2, num_iterations=50, num_centroids=2))
+    stub.Run(kmeans_pb2.MasterInput(num_mappers=5, num_reducers=3, num_iterations=50, num_centroids=8))
 
 
 if __name__ == "__main__":

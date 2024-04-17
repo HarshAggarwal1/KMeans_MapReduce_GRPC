@@ -52,6 +52,7 @@ message ReduceOutput {
     int32 centroid_id = 1;
     Point updated_centroid = 2;
     bool success = 3;
+    bool done = 4;
 }
 
 message CentroidCompilationInput {
