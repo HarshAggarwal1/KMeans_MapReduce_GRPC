@@ -11,11 +11,14 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
         self.address = address
         self.port = port
         self.id = id
+        self.num_centroids = 0
     
     
     def Map(self, request, context):
         input_split = request.input_split
         centroids = request.centroids
+        
+        self.num_centroids = len(centroids)
 
         file = open("Input/points.txt", "r")
         points = []
@@ -45,8 +48,14 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
         map_outputs = request.mapped_points
         num_reducers = request.num_reducers
         
+        centroids_list = []
+        for i in range(self.num_centroids):
+            centroids_list.append(i)
+            
+        centroids = set(centroids_list)
+        
         num_points = len(map_outputs)
-        partition_size = round(num_points / num_reducers)
+        num_centroid_per_reducer = round(len(centroids) / num_reducers)
         i = 0
         while num_points > 0:
             if os.path.isdir(f"Mappers/M{self.id}") == False:
@@ -57,16 +66,41 @@ class MapperServicer(kmeans_pb2_grpc.KMeansServicer):
             
             file = open(f"Mappers/M{self.id}/Partition{i}.txt", "w")
             
-            for j in range(partition_size):
-                if num_points == 0:
-                    break
-                map_output = map_outputs.pop(0)
-                file.write(f"{map_output.centroid_index},{map_output.data_point.x},{map_output.data_point.y},{map_output.count}\n")
-                num_points -= 1
+            for _ in range(num_centroid_per_reducer):
+                c_ind = centroids.pop()
+                for map_output in map_outputs:
+                    if map_output.centroid_index == c_ind and num_points > 0:
+                        file.write(f"{map_output.centroid_index},{map_output.data_point.x},{map_output.data_point.y},{map_output.count}\n")
+                        num_points -= 1
+            
             file.close()
             i += 1
     
         return kmeans_pb2.PartitionOutput(success=True)
+
+    
+    def MapperToReducer(self, request, context):
+        reducer_address = request.address
+        reducer_id = int(request.id)
+        mapped_points = []
+        
+        if os.path.isfile(f"Mappers/M{self.id}/Partition{reducer_id - 1}.txt") == False:
+            return kmeans_pb2.MapperToReducerOutput(mapped_points=mapped_points)
+        
+        file = open(f"Mappers/M{self.id}/Partition{reducer_id - 1}.txt", "r")
+        
+        
+        for line in file:
+            mapped_point = kmeans_pb2.MappedPoint()
+            mapped_point.centroid_index = int(line.split(sep=",")[0])
+            mapped_point.data_point.x = float(line.split(sep=",")[1])
+            mapped_point.data_point.y = float(line.split(sep=",")[2])
+            mapped_point.count = int(line.split(sep=",")[3])
+            mapped_points.append(mapped_point)
+            
+        file.close()
+        
+        return kmeans_pb2.MapperToReducerOutput(mapped_points=mapped_points)
             
         
     def find_nearest_centroid(self, point, centroids):

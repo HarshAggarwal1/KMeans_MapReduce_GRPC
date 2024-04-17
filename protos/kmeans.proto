@@ -45,6 +45,7 @@ message PartitionOutput {
 
 message ReduceInput {
     int32 centroid_id = 1;
+    int32 num_mappers = 2;
 }
 
 message ReduceOutput {
@@ -61,10 +62,20 @@ message CentroidCompilationOutput {
     repeated Point centroids = 1;
 }
 
+message MapperToReducerInput {
+    string address = 1;
+    string id = 2;
+}
+
+message MapperToReducerOutput {
+    repeated MappedPoint mapped_points = 1;
+}
+
 service KMeans {
     rpc Run(MasterInput) returns (CentroidCompilationOutput) {}
     rpc Map(MapInput) returns (MapOutput) {}
     rpc Partition(PartitionInput) returns (PartitionOutput) {}
     rpc Reduce(ReduceInput) returns (ReduceOutput) {}
     rpc CompileCentroids(CentroidCompilationInput) returns (CentroidCompilationOutput) {}
+    rpc MapperToReducer(MapperToReducerInput) returns (MapperToReducerOutput) {}
 }

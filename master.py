@@ -34,7 +34,7 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
             
             for _, _, files in os.walk("Reducers"):
                 for file in files:
-                    os.remove(f"Reducers/{file}")
+                    os.remove(f"Reducers/{file}")        
             
             new_centroids = self.work(num_mappers, num_reducers, num_centroids, points, centroids)
             
@@ -58,7 +58,7 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
     
     def check_convergence(self, new_centroids, centroids):
         for i in range(len(new_centroids)):
-            if new_centroids[i].x != centroids[i].x or new_centroids[i].y != centroids[i].y:
+            if abs(new_centroids[i].x - centroids[i].x) > 0.0001 or abs(new_centroids[i].y - centroids[i].y) > 0.0001:
                 return False
         return True
         
@@ -101,8 +101,6 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
             
             channel.close()
         
-        for task in map_tasks:
-            task.terminate()
         
         # ========================================================================================================================= #
         
@@ -115,26 +113,24 @@ class MasterServicer(kmeans_pb2_grpc.KMeansServicer):
             except Exception as e:
                 print(e)
         
-        num_centroids_per_reducer = round(num_centroids / num_reducers)
-        num_centroids_remaining = num_centroids
-        index = 0
         for i in range(num_reducers):
             channel = grpc.insecure_channel(f"localhost:7005{i + 1}")
             stub = kmeans_pb2_grpc.KMeansStub(channel)
             
-            for j in range(min(num_centroids_per_reducer, num_centroids_remaining)):
-                reduce_input = kmeans_pb2.ReduceInput(centroid_id=index)
+            for j in range(num_centroids):
+                reduce_input = kmeans_pb2.ReduceInput(num_mappers=num_mappers, centroid_id=j)
                 response = stub.Reduce(reduce_input)
-                new_centroids[response.centroid_id] = response.updated_centroid
-                index += 1
-            
-            num_centroids_remaining -= num_centroids_per_reducer
+                if response.success:
+                    new_centroids[response.centroid_id] = response.updated_centroid
             
             if response.success:
                 print(f"Reducing by Reducer {i + 1} successful")
             
             channel.close()
         
+        for task in map_tasks:
+            task.terminate()
+            
         for task in reduce_tasks:
             task.terminate()
                                 
@@ -148,7 +144,7 @@ def serve():
     server.start()
     channel = grpc.insecure_channel("localhost:50051")
     stub = kmeans_pb2_grpc.KMeansStub(channel)
-    stub.Run(kmeans_pb2.MasterInput(num_mappers=5, num_reducers=2, num_iterations=50, num_centroids=8))
+    stub.Run(kmeans_pb2.MasterInput(num_mappers=5, num_reducers=2, num_iterations=50, num_centroids=2))
 
 
 if __name__ == "__main__":

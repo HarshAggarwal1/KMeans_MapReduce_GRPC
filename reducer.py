@@ -15,16 +15,22 @@ class ReducerServicer(kmeans_pb2_grpc.KMeansServicer):
     
     def Reduce(self, request, context):
         centroid_index = request.centroid_id
-        points = self.shuffle_and_sort(centroid_index=centroid_index)
+        num_mappers = request.num_mappers
+        points = self.shuffle_and_sort(num_mappers=num_mappers)
         
         sum_x = 0.0
         sum_y = 0.0
         count = 0
         
         for point in points:
+            if point.centroid_index != centroid_index:
+                continue
             sum_x += point.data_point.x
             sum_y += point.data_point.y
             count += point.count
+        
+        if count == 0:
+            return kmeans_pb2.ReduceOutput(centroid_id=centroid_index, updated_centroid=point.data_point, success=False)
         
         new_centroid = kmeans_pb2.Point()
         new_centroid.x = sum_x / count
@@ -40,22 +46,16 @@ class ReducerServicer(kmeans_pb2_grpc.KMeansServicer):
         return kmeans_pb2.ReduceOutput(centroid_id=centroid_index, updated_centroid=new_centroid, success=True)
 
     
-    def shuffle_and_sort(self, centroid_index):
+    def shuffle_and_sort(self, num_mappers):
         shuffled_points = []
-        for _, dirs, _ in os.walk("Mappers"):
-            for dir in dirs:
-                for _, _, files in os.walk(f"Mappers/{dir}"):
-                    for file in files:
-                        file = open(f"Mappers/{dir}/{file}", "r")
-                        for line in file:
-                            mapped_point = kmeans_pb2.MappedPoint()
-                            mapped_point.centroid_index = int(line.split(",")[0])
-                            mapped_point.data_point.x = float(line.split(",")[1])
-                            mapped_point.data_point.y = float(line.split(",")[2])
-                            mapped_point.count = int(line.split(",")[3])
-                            if mapped_point.centroid_index == centroid_index:
-                                shuffled_points.append(mapped_point) 
-                        file.close()
+        for i in range(num_mappers):
+            channel = grpc.insecure_channel(f"localhost:6005{i + 1}")
+            stub = kmeans_pb2_grpc.KMeansStub(channel)
+            mapper_to_reducer_input = kmeans_pb2.MapperToReducerInput(address=f'{self.address}:{self.port}', id=self.id)
+            response = stub.MapperToReducer(mapper_to_reducer_input)
+            channel.close()
+            shuffled_points.extend(response.mapped_points)
+        shuffled_points.sort(key=lambda x: x.centroid_index)
         return shuffled_points
         
 

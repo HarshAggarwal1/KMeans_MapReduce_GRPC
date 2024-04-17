@@ -39,6 +39,11 @@ class KMeansStub(object):
                 request_serializer=kmeans__pb2.CentroidCompilationInput.SerializeToString,
                 response_deserializer=kmeans__pb2.CentroidCompilationOutput.FromString,
                 )
+        self.MapperToReducer = channel.unary_unary(
+                '/kmeans.KMeans/MapperToReducer',
+                request_serializer=kmeans__pb2.MapperToReducerInput.SerializeToString,
+                response_deserializer=kmeans__pb2.MapperToReducerOutput.FromString,
+                )
 
 
 class KMeansServicer(object):
@@ -74,6 +79,12 @@ class KMeansServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def MapperToReducer(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_KMeansServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -101,6 +112,11 @@ def add_KMeansServicer_to_server(servicer, server):
                     servicer.CompileCentroids,
                     request_deserializer=kmeans__pb2.CentroidCompilationInput.FromString,
                     response_serializer=kmeans__pb2.CentroidCompilationOutput.SerializeToString,
+            ),
+            'MapperToReducer': grpc.unary_unary_rpc_method_handler(
+                    servicer.MapperToReducer,
+                    request_deserializer=kmeans__pb2.MapperToReducerInput.FromString,
+                    response_serializer=kmeans__pb2.MapperToReducerOutput.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -194,5 +210,22 @@ class KMeans(object):
         return grpc.experimental.unary_unary(request, target, '/kmeans.KMeans/CompileCentroids',
             kmeans__pb2.CentroidCompilationInput.SerializeToString,
             kmeans__pb2.CentroidCompilationOutput.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def MapperToReducer(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/kmeans.KMeans/MapperToReducer',
+            kmeans__pb2.MapperToReducerInput.SerializeToString,
+            kmeans__pb2.MapperToReducerOutput.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
